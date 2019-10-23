@@ -1,0 +1,21 @@
+{application, emqtt_tester,
+ [{description, "A testing framework for asserting mqtt messages in a distributed system"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib,
+    lager
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []},
+
+  {lager, [
+    {handlers, [
+      {lager_console_backend, [{level, debug}]}
+    ]}
+  ]}
+ ]}.
