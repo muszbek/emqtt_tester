@@ -12,7 +12,7 @@
 %%% TESTER DATA DEFINITIONS %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--define(MQTT_ADDRESS, {"10.5.0.10", 1883, "odin", "odin42"}).
+-define(MQTT_ADDRESS, {"127.0.0.1", 1883, "guest", ""}).
 -define(TEST_ASSERTIONS, [{}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
