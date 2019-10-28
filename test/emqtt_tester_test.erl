@@ -35,9 +35,14 @@
 
 setup() ->
 	meck:new(emqttc),
+	meck:expect(emqttc, start_link, fun start_mock_emqttc/1),
+	meck:expect(emqttc, subscribe, fun mock_subscribe/3),
+	meck:expect(emqttc, unsubscribe, fun mock_unsubscribe/2),
+	meck:expect(emqttc, publish, fun mock_publish/3),
 	ok.
 
 cleanup(_) ->
+	meck:unload(emqttc),
 	ok.
 
 %%%%%%%%%%%%%%%%%%%%
@@ -50,3 +55,15 @@ cleanup(_) ->
 %%% HELPER FUNCTIONS %%%
 %%%%%%%%%%%%%%%%%%%%%%%%
 
+start_mock_emqttc(_ArgList) ->
+	Conn = mock_conn,
+	{ok, Conn}.
+
+mock_subscribe(_Conn, _Topic, _Qos) ->
+	ok.
+
+mock_unsubscribe(_Conn, _Topic) ->
+	ok.
+	
+mock_publish(_Conn, Topic, Payload) ->
+	self() ! {publish, Topic, Payload}.
