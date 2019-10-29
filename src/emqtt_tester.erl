@@ -28,6 +28,13 @@ run(MqttAddress, Assertions, ActionToTest) ->
 %% Internal functions
 %% ====================================================================
 
+validate_assertion({Topic, ExpectedPayload, AssertionMessage}) ->
+	validate_assertion({Topic, ExpectedPayload, AssertionMessage, ?DEFAULT_TIMEOUT});
+
+validate_assertion(Assertion) ->
+	Assertion.
+
+
 wait_until_connected(Conn, Assertions) ->
 	receive
 		{mqttc, Conn, connected} ->
@@ -86,13 +93,6 @@ assert_message(Conn, Assertions, Reports, OldTimerProc) ->
 	end.
 
 
-validate_assertion({Topic, ExpectedPayload, AssertionMessage}) ->
-	validate_assertion({Topic, ExpectedPayload, AssertionMessage, ?DEFAULT_TIMEOUT});
-
-validate_assertion(Assertion) ->
-	Assertion.
-
-
 start_timer_if_not_alive(no_timer, TimeOut) ->
 	start_timer(TimeOut);
 
@@ -109,7 +109,6 @@ start_timer(TimeOut) ->
 
 save_report(AssertionMessage, Reports, Evaluation) ->
 	_NewReports = [{AssertionMessage, Evaluation} | Reports].
-
 
 report(ReverseReports) ->
 	Reports = lists:reverse(ReverseReports),
