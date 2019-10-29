@@ -8,28 +8,28 @@
 %% ActionToTest: fun (Conn) -> ok/error
 run(MqttAddress, Assertions, ActionToTest) ->
 	Conn = emqttc_utils:connect_mqttc(MqttAddress),
+	wait_until_connected(Conn, Assertions),
 	
 	TestActionPid = spawn(fun() -> ActionToTest(Conn) end),
 	lager:debug("Test process spawned at ~p", [TestActionPid]),
 	
-	listenOnMqtt(Conn, Assertions).
+	assert_message(Conn, Assertions, []).
 
 
-listenOnMqtt(Conn, Assertions) ->
+wait_until_connected(Conn, Assertions) ->
 	receive
 		{mqttc, Conn, connected} ->
 			lager:debug("Emqttc connected: ~p", [Conn]),
-			emqttc_utils:subscribe_to_assertions(Conn, Assertions),
-			
-			assert_message(Conn, Assertions, []);
+			emqttc_utils:subscribe_to_assertions(Conn, Assertions);
 		
 		Message ->
-			lager:warning("Unexpected message: ~p~n", [Message])
+			lager:warning("Unexpected message: ~p~n", [Message]),
+			wait_until_connected(Conn, Assertions)
 		%% emqttc doesn't give any messages on timeout by default
 	end.
 
 
-assert_message(Conn, [], Reports) ->
+assert_message(_Conn, [], Reports) ->
 	report(Reports);
 
 assert_message(Conn, Assertions, Reports) ->
@@ -49,7 +49,8 @@ assert_message(Conn, Assertions, Reports) ->
 			assert_message(Conn, Assertions, Reports);
 		
 		{mqttc, Conn, disconnected} ->
-			lager:warning("Mqttc connection lost!");
+			lager:warning("Mqttc connection lost!"),
+			{error, mqttc_disconnected};
 		
 		Message ->
 			lager:warning("Unexpected message: ~p~n", [Message]),
@@ -62,4 +63,8 @@ save_report(AssertionMessage, Reports) ->
 
 report(Reports) ->
 	lager:debug("Printing reports now: ~p~n", [Reports]),
-	ok.
+	%%TODO: print reports
+
+	ReportedResults = [Result || {_Message, Result} <- Reports],
+	%% ideally [success, success, ... , success]
+	ReportedResults.
