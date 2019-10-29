@@ -111,7 +111,8 @@ save_report(AssertionMessage, Reports, Evaluation) ->
 	_NewReports = [{AssertionMessage, Evaluation} | Reports].
 
 
-report(Reports) ->
+report(ReverseReports) ->
+	Reports = lists:reverse(ReverseReports),
 	lager:debug("Printing reports now: ~p~n", [Reports]),
 	%%TODO: print reports
 

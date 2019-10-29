@@ -13,8 +13,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -define(MQTT_ADDRESS, {"127.0.0.1", 1883, "guest", ""}).
--define(TEST_ASSERTIONS, [{<<"topic_first">>, <<"payload_first">>, "Message_first!", 100},
-						  {<<"topic_second">>, <<"payload_second">>, "Message_second!", 100}]).
+-define(TEST_ASSERTIONS, [{<<"topic_first">>, <<"payload_first">>, "Message_first!", 15},
+						  {<<"topic_second">>, <<"payload_second">>, "Message_second!", 15}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% TESTS DESCRIPTIONS %%%
@@ -34,6 +34,10 @@ on_error_fail_test_() ->
 	 ?setup([fun emqtt_disconnect_returns_error/1,
 			 fun action_to_test_crashes_returns_error/1,
 			 fun action_to_test_exits_returns_error/1])}.
+
+assertions_fail_on_timeout_test_() ->
+	{"The test run fails all assertions which do not receive their message before timeout.",
+	 ?setup([fun publish_asserted_with_delay_fails/1])}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -93,6 +97,14 @@ action_to_test_exits_returns_error(_) ->
 	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS,
 							   fun action_to_test_exits/1),
 	?_assertEqual(Results, {error, test_action_crashed}).
+
+
+%% assertions_fail_on_timeout_test
+
+publish_asserted_with_delay_fails(_) ->
+	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS,
+							   fun action_to_test_assertion_timeout/1),
+	?_assertEqual(Results, [success, failure]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -182,5 +194,11 @@ action_to_test_crashes(Conn) ->
 action_to_test_exits(Conn) ->
 	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
 	exit(testing_exit_case),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+
+action_to_test_assertion_timeout(Conn) ->
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	timer:sleep(20),
 	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
 	
