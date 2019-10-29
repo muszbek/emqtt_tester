@@ -8,18 +8,18 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([subscribeToAssertions/2, connect_mqttc/1]).
+-export([subscribe_to_assertions/2, connect_mqttc/1]).
 
 
-subscribeToAssertions(_Conn, []) ->
+subscribe_to_assertions(_Conn, []) ->
 	lager:debug("All assertion topics have been subscribed"),
 	ok;
 
-subscribeToAssertions(Conn, Assertions) ->
+subscribe_to_assertions(Conn, Assertions) ->
 	[CurrentAssertion | RemainingAssertions] = Assertions,
-	subscribeAssertion(Conn, CurrentAssertion),
+	subscribe_assertion(Conn, CurrentAssertion),
 	
-	subscribeToAssertions(Conn, RemainingAssertions).
+	subscribe_to_assertions(Conn, RemainingAssertions).
 
 
 connect_mqttc({BrokerHost, BrokerPort, BrokerUser, BrokerPasswd})->
@@ -43,10 +43,10 @@ connect_mqttc({BrokerHost, BrokerPort, BrokerUser, BrokerPasswd, MyId})->
 %% Internal functions
 %% ====================================================================
 
-subscribeAssertion(Conn, {Topic, _Payload, _Message}) ->
+subscribe_assertion(Conn, {Topic, _Payload, _Message}) ->
 	lager:debug("Subscribing to topic ~p", [Topic]),
 	emqttc:subscribe(Conn, Topic, 0).
 
-unsubscribeAssertion(Conn, {Topic, _Payload, _Message}) ->
+unsubscribe_assertion(Conn, {Topic, _Payload, _Message}) ->
 	lager:debug("Unsubscribing from topic ~p", [Topic]),
 	emqttc:unsubscribe(Conn, Topic).

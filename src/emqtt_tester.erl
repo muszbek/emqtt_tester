@@ -10,18 +10,18 @@ run(MqttAddress, Assertions, ActionToTest) ->
 	Conn = emqttc_utils:connect_mqttc(MqttAddress),
 	
 	TestActionPid = spawn(fun() -> ActionToTest(Conn) end),
+	lager:debug("Test process spawned at ~p", [TestActionPid]),
 	
-	listenOnMqtt(Conn, Assertions),
-	
-	ok.
+	listenOnMqtt(Conn, Assertions).
 
 
 listenOnMqtt(Conn, Assertions) ->
 	receive
 		{mqttc, Conn, connected} ->
 			lager:debug("Emqttc connected: ~p", [Conn]),
-			emqttc_utils:subscribeToAssertions(Conn, Assertions),
-			assertMessage(Conn, Assertions, []);
+			emqttc_utils:subscribe_to_assertions(Conn, Assertions),
+			
+			assert_message(Conn, Assertions, []);
 		
 		Message ->
 			lager:warning("Unexpected message: ~p~n", [Message])
@@ -29,10 +29,10 @@ listenOnMqtt(Conn, Assertions) ->
 	end.
 
 
-assertMessage(Conn, [], Reports) ->
+assert_message(Conn, [], Reports) ->
 	report(Reports);
 
-assertMessage(Conn, Assertions, Reports) ->
+assert_message(Conn, Assertions, Reports) ->
 	lager:debug("Calling assert, remaining assertions: ~p~n", [Assertions]),
 	[CurrentAssertion | RemainingAssertions] = Assertions,
 	{Topic, ExpectedPayload, AssertionMessage} = CurrentAssertion,
@@ -41,22 +41,22 @@ assertMessage(Conn, Assertions, Reports) ->
 		{publish, Topic, ExpectedPayload} ->
 			lager:debug("Assertion succeeded on topic ~p with payload ~p", 
 						[Topic, ExpectedPayload]),
-			NewReports = saveReport(AssertionMessage, Reports),
-			assertMessage(Conn, RemainingAssertions, NewReports);
+			NewReports = save_report(AssertionMessage, Reports),
+			assert_message(Conn, RemainingAssertions, NewReports);
 		
 		{publish, OtherTopic, OtherPayload} ->
 			lager:debug("Unexpected message on mqtt: ~p: ~p", [OtherTopic, OtherPayload]),
-			assertMessage(Conn, Assertions, Reports);
+			assert_message(Conn, Assertions, Reports);
 		
 		{mqttc, Conn, disconnected} ->
 			lager:warning("Mqttc connection lost!");
 		
 		Message ->
 			lager:warning("Unexpected message: ~p~n", [Message]),
-			assertMessage(Conn, Assertions, Reports)
+			assert_message(Conn, Assertions, Reports)
 	end.
 
-saveReport(AssertionMessage, Reports) ->
+save_report(AssertionMessage, Reports) ->
 	NewReports = [{AssertionMessage, success} | Reports],
 	NewReports.
 
