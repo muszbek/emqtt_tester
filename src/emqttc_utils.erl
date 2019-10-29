@@ -43,10 +43,10 @@ connect_mqttc({BrokerHost, BrokerPort, BrokerUser, BrokerPasswd, MyId})->
 %% Internal functions
 %% ====================================================================
 
-subscribe_assertion(Conn, {Topic, _Payload, _Message}) ->
+subscribe_assertion(Conn, {Topic, _Payload, _Message, _TimeOut}) ->
 	lager:debug("Subscribing to topic ~p", [Topic]),
 	emqttc:subscribe(Conn, Topic, 0).
 
-unsubscribe_assertion(Conn, {Topic, _Payload, _Message}) ->
+unsubscribe_assertion(Conn, {Topic, _Payload, _Message, _TimeOut}) ->
 	lager:debug("Unsubscribing from topic ~p", [Topic]),
 	emqttc:unsubscribe(Conn, Topic).
