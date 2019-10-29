@@ -13,15 +13,15 @@
 %%				 AssertionMessage :: string(), TimeOut :: non_neg_integer()}]
 %% ActionToTest: fun((Conn) -> ok/error)
 run(MqttAddress, Assertions, ActionToTest) ->
-	FormattedAssertions = lists:map(fun get_assertion/1, Assertions),	%% apply default timeout
+	ValidAssertions = lists:map(fun validate_assertion/1, Assertions),	%% apply default timeout
 	
 	Conn = emqttc_utils:connect_mqttc(MqttAddress),
-	wait_until_connected(Conn, FormattedAssertions),
+	wait_until_connected(Conn, ValidAssertions),
 	
 	TestAction = spawn_monitor(fun() -> ActionToTest(Conn) end),
 	lager:debug("Test process spawned at ~p", [TestAction]),
 	
-	assert_message(Conn, FormattedAssertions, [], no_timer).
+	assert_message(Conn, ValidAssertions, [], no_timer).
 
 
 %% ====================================================================
@@ -86,10 +86,10 @@ assert_message(Conn, Assertions, Reports, OldTimerProc) ->
 	end.
 
 
-get_assertion({Topic, ExpectedPayload, AssertionMessage}) ->
-	get_assertion({Topic, ExpectedPayload, AssertionMessage, ?DEFAULT_TIMEOUT});
+validate_assertion({Topic, ExpectedPayload, AssertionMessage}) ->
+	validate_assertion({Topic, ExpectedPayload, AssertionMessage, ?DEFAULT_TIMEOUT});
 
-get_assertion(Assertion) ->
+validate_assertion(Assertion) ->
 	Assertion.
 
 
