@@ -1,11 +1,17 @@
 -module(emqtt_tester).
 -compile([{parse_transform, lager_transform}]).
 
+-define(DEFAULT_TIMEOUT, 1000).
+
+%% ====================================================================
+%% API functions
+%% ====================================================================
 -export([run/3]).
 
 %% MqttAddress: {Host, Port, User, Pw}
-%% Assertions: [{Topic :: bin, ExpectedPayload :: bin, AssertionMessage :: list(string)}]
-%% ActionToTest: fun (Conn) -> ok/error
+%% Assertions: [{Topic :: bin(), ExpectedPayload :: bin(), 
+%%				 AssertionMessage :: string(), TimeOut :: non_neg_integer()}]
+%% ActionToTest: fun((Conn) -> ok/error)
 run(MqttAddress, Assertions, ActionToTest) ->
 	Conn = emqttc_utils:connect_mqttc(MqttAddress),
 	wait_until_connected(Conn, Assertions),
@@ -15,6 +21,10 @@ run(MqttAddress, Assertions, ActionToTest) ->
 	
 	assert_message(Conn, Assertions, []).
 
+
+%% ====================================================================
+%% Internal functions
+%% ====================================================================
 
 wait_until_connected(Conn, Assertions) ->
 	receive
@@ -35,7 +45,7 @@ assert_message(_Conn, [], Reports) ->
 assert_message(Conn, Assertions, Reports) ->
 	lager:debug("Calling assert, remaining assertions: ~p~n", [Assertions]),
 	[CurrentAssertion | RemainingAssertions] = Assertions,
-	{Topic, ExpectedPayload, AssertionMessage} = CurrentAssertion,
+	{Topic, ExpectedPayload, AssertionMessage, TimeOut} = get_assertion(CurrentAssertion),
 	
 	receive
 		{publish, Topic, ExpectedPayload} ->
@@ -64,6 +74,12 @@ assert_message(Conn, Assertions, Reports) ->
 			lager:warning("Unexpected message: ~p~n", [Message]),
 			assert_message(Conn, Assertions, Reports)
 	end.
+
+get_assertion({Topic, ExpectedPayload, AssertionMessage}) ->
+	get_assertion({Topic, ExpectedPayload, AssertionMessage, ?DEFAULT_TIMEOUT});
+
+get_assertion(Assertion) ->
+	Assertion.
 
 save_report(AssertionMessage, Reports) ->
 	NewReports = [{AssertionMessage, success} | Reports],
