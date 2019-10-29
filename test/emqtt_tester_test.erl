@@ -26,11 +26,14 @@ assertions_succeed_test_() ->
 			 fun publish_unsubscribed_topic_succeeds/1,
 			 fun publish_wrong_payload_succeeds/1,
 			 fun publish_duplicate_payload_succeeds/1,
-			 fun send_unrelated_message_succeeds/1])}.
+			 fun send_unrelated_message_succeeds/1,
+			 fun action_to_test_down_before_assert_succeeds/1])}.
 
-on_emqtt_disconnect_fail_test_() ->
-	{"Emqtt disconnects at any point of the test and the whole result is error.",
-	 ?setup([fun emqtt_disconnect_returns_error/1])}.
+on_error_fail_test_() ->
+	{"Any processes crashing during the tests return an error.",
+	 ?setup([fun emqtt_disconnect_returns_error/1,
+			 fun action_to_test_crashes_returns_error/1,
+			 fun action_to_test_exits_returns_error/1])}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -70,6 +73,9 @@ publish_duplicate_payload_succeeds(_) ->
 send_unrelated_message_succeeds(_) ->
 	assert_success(fun action_to_test_unrelated_message/1).
 
+action_to_test_down_before_assert_succeeds(_) ->
+	assert_success(fun action_to_test_normal_down_message/1).
+
 
 %% on_emqtt_disconnect_fail_test
 
@@ -77,6 +83,16 @@ emqtt_disconnect_returns_error(_) ->
 	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS,
 							   fun action_to_test_emqtt_disconnects/1),
 	?_assertEqual(Results, {error, mqttc_disconnected}).
+
+action_to_test_crashes_returns_error(_) ->
+	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS,
+							   fun action_to_test_crashes/1),
+	?_assertEqual(Results, {error, test_action_crashed}).
+
+action_to_test_exits_returns_error(_) ->
+	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS,
+							   fun action_to_test_exits/1),
+	?_assertEqual(Results, {error, test_action_crashed}).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -145,10 +161,26 @@ action_to_test_unrelated_message(Conn) ->
 	TestProc ! completely_different_message,
 	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
 
+action_to_test_normal_down_message(Conn) ->
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	spawn(fun() -> timer:sleep(10),
+				   emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>)
+		  end).
+
 
 action_to_test_emqtt_disconnects(Conn) ->
 	{TestProc, _Subs} = Conn,	%% in this mock context
 	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
 	TestProc ! {mqttc, Conn, disconnected},	%% should throw error here
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+action_to_test_crashes(Conn) ->
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	erlang:error(testing_error_case),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+action_to_test_exits(Conn) ->
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	exit(testing_exit_case),
 	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
 	
