@@ -10,8 +10,8 @@ run(MqttAddress, Assertions, ActionToTest) ->
 	Conn = emqttc_utils:connect_mqttc(MqttAddress),
 	wait_until_connected(Conn, Assertions),
 	
-	TestActionPid = spawn(fun() -> ActionToTest(Conn) end),
-	lager:debug("Test process spawned at ~p", [TestActionPid]),
+	TestAction = spawn_monitor(fun() -> ActionToTest(Conn) end),
+	lager:debug("Test process spawned at ~p", [TestAction]),
 	
 	assert_message(Conn, Assertions, []).
 
@@ -51,6 +51,14 @@ assert_message(Conn, Assertions, Reports) ->
 		{mqttc, Conn, disconnected} ->
 			lager:warning("Mqttc connection lost!"),
 			{error, mqttc_disconnected};
+		
+		{'DOWN', _Ref, process, TestActionPid, normal} ->
+			lager:debug("The test action process ~p finished executing", [TestActionPid]),
+			assert_message(Conn, Assertions, Reports);
+		
+		{'DOWN', _Ref, process, TestActionPid, _} ->
+			lager:warning("The test action process ~p crashed!", [TestActionPid]),
+			{error, test_action_crashed};
 		
 		Message ->
 			lager:warning("Unexpected message: ~p~n", [Message]),
