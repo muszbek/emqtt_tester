@@ -20,9 +20,13 @@
 %%% TESTS DESCRIPTIONS %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-fsm_starts_first_test_() ->
-	{"The test run succeeds all assertions.",
-	 ?setup([fun publish_only_asserted_succeeds/1])}.
+assertions_succeed_test_() ->
+	{"The test run succeeds all assertions when the messages arrive in correct order.",
+	 ?setup([fun publish_only_asserted_succeeds/1,
+			 fun publish_unsubscribed_topic_succeeds/1,
+			 fun publish_wrong_payload_succeeds/1,
+			 fun publish_duplicate_payload_succeeds/1,
+			 fun send_unrelated_message_succeeds/1])}.
 
 %% server_starts_first_test_() ->
 %% 	{"The fsm starts up at idle state if the server is already up.",
@@ -49,10 +53,22 @@ cleanup(_) ->
 %%% ACTUAL TESTS %%%
 %%%%%%%%%%%%%%%%%%%%
 
+%% assertions_succeed_test
+
 publish_only_asserted_succeeds(_) ->
-	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS, 
-							   fun action_to_test_only_asserted/1),
-	?_assertEqual(Results, [success, success]).	
+	assert_success(fun action_to_test_only_asserted/1).
+
+publish_unsubscribed_topic_succeeds(_) ->
+	assert_success(fun action_to_test_unsubscribed_topic/1).
+
+publish_wrong_payload_succeeds(_) ->
+	assert_success(fun action_to_test_wrong_payload/1).
+
+publish_duplicate_payload_succeeds(_) ->
+	assert_success(fun action_to_test_duplicate_payload/1).
+
+send_unrelated_message_succeeds(_) ->
+	assert_success(fun action_to_test_unrelated_message/1).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -89,7 +105,35 @@ mock_publish(Conn, Topic, Payload) ->
 	end.
 
 
+assert_success(ActionToTest) ->
+	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS, ActionToTest),
+	?_assertEqual(Results, [success, success]).
+
+
+%% functions to pass as ActionToTest
 action_to_test_only_asserted(Conn) ->
 	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+action_to_test_unsubscribed_topic(Conn) ->
+	{TestProc, _Subs} = Conn,	%% in this mock context
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	TestProc ! {publish, <<"topic_unsubscribed">>, <<"payload_second">>},
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+action_to_test_wrong_payload(Conn) ->
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_first">>),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+action_to_test_duplicate_payload(Conn) ->
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+action_to_test_unrelated_message(Conn) ->
+	{TestProc, _Subs} = Conn,	%% in this mock context
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	TestProc ! completely_different_message,
 	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
 	
