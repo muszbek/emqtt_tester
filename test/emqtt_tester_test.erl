@@ -37,7 +37,8 @@ on_error_fail_test_() ->
 
 assertions_fail_on_timeout_test_() ->
 	{"The test run fails all assertions which do not receive their message before timeout.",
-	 ?setup([fun publish_asserted_with_delay_fails/1])}.
+	 ?setup([fun publish_asserted_with_delay_fails/1,
+			 fun publish_asserted_succeeds_after_failure/1])}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -105,6 +106,11 @@ publish_asserted_with_delay_fails(_) ->
 	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS,
 							   fun action_to_test_assertion_timeout/1),
 	?_assertEqual(Results, [success, failure]).
+
+publish_asserted_succeeds_after_failure(_) ->
+	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS,
+							   fun action_to_test_assertion_timeout_then_succeed/1),
+	?_assertEqual(Results, [failure, success]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -200,5 +206,10 @@ action_to_test_exits(Conn) ->
 action_to_test_assertion_timeout(Conn) ->
 	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
 	timer:sleep(20),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+
+action_to_test_assertion_timeout_then_succeed(Conn) ->
+	timer:sleep(20),
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
 	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
 	
