@@ -20,11 +20,10 @@
 %%% TESTS DESCRIPTIONS %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% fsm_starts_first_test_() ->
-%% 	{"The fsm waits in down state until the python server is up at startup.",
-%% 	 ?setup([fun fsm_before_server/1,
-%% 			 fun server_after_fsm/1])}.
-%% 
+fsm_starts_first_test_() ->
+	{"The test run succeeds all assertions.",
+	 ?setup([fun publish_only_asserted_succeeds/1])}.
+
 %% server_starts_first_test_() ->
 %% 	{"The fsm starts up at idle state if the server is already up.",
 %% 	 ?setup([fun fsm_after_server/1])}.
@@ -50,6 +49,10 @@ cleanup(_) ->
 %%% ACTUAL TESTS %%%
 %%%%%%%%%%%%%%%%%%%%
 
+publish_only_asserted_succeeds(_) ->
+	Results = emqtt_tester:run(?MQTT_ADDRESS, ?TEST_ASSERTIONS, 
+							   fun action_to_test_only_asserted/1),
+	?_assertEqual(Results, [success, success]).	
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -57,14 +60,14 @@ cleanup(_) ->
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 start_mock_emqttc(_ArgList) ->
-	Subscriptions = ets:new({mock_conn, [duplicate_bag]}),
+	Subscriptions = ets:new(mock_conn, [duplicate_bag]),
 	Conn = {self(), Subscriptions},
 	self() ! {mqttc, Conn, connected},
 	{ok, Conn}.
 
 mock_subscribe(Conn, Topic, _Qos) ->
 	{_TestProc, Subscriptions} = Conn,
-	true = ets:insert(Subscriptions, Topic),
+	true = ets:insert(Subscriptions, {Topic}),
 	ok.
 
 mock_unsubscribe(Conn, Topic) ->
@@ -75,7 +78,7 @@ mock_unsubscribe(Conn, Topic) ->
 mock_publish(Conn, Topic, Payload) ->
 	{TestProc, Subscriptions} = Conn,
 	
-	case ets:lookup(Conn, Topic) of
+	case ets:lookup(Subscriptions, Topic) of
 		[] -> 
 			lager:debug("Test publishing to an unsubscribed topic ~p, ignored", [Topic]),
 			ok;
