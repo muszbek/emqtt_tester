@@ -13,7 +13,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -define(MQTT_ADDRESS, {"127.0.0.1", 1883, "guest", ""}).
--define(TEST_ASSERTIONS, [{}]).
+-define(TEST_ASSERTIONS, [{<<"topic_first">>, <<"payload_first">>, "Message_first!"},
+						  {<<"topic_second">>, <<"payload_second">>, "Message_second!"}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% TESTS DESCRIPTIONS %%%
@@ -56,14 +57,36 @@ cleanup(_) ->
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 start_mock_emqttc(_ArgList) ->
-	Conn = mock_conn,
+	Subscriptions = ets:new({mock_conn, [duplicate_bag]}),
+	Conn = {self(), Subscriptions},
+	self() ! {mqttc, Conn, connected},
 	{ok, Conn}.
 
-mock_subscribe(_Conn, _Topic, _Qos) ->
+mock_subscribe(Conn, Topic, _Qos) ->
+	{_TestProc, Subscriptions} = Conn,
+	true = ets:insert(Subscriptions, Topic),
 	ok.
 
-mock_unsubscribe(_Conn, _Topic) ->
+mock_unsubscribe(Conn, Topic) ->
+	{_TestProc, Subscriptions} = Conn,
+	true = ets:delete(Subscriptions, Topic),
 	ok.
 	
-mock_publish(_Conn, Topic, Payload) ->
-	self() ! {publish, Topic, Payload}.
+mock_publish(Conn, Topic, Payload) ->
+	{TestProc, Subscriptions} = Conn,
+	
+	case ets:lookup(Conn, Topic) of
+		[] -> 
+			lager:debug("Test publishing to an unsubscribed topic ~p, ignored", [Topic]),
+			ok;
+		[_|_] ->	%% lookup returns not empty list, Topic is present in ets
+			lager:debug("Test publishing to subscrubed topic ~p", [Topic]),
+			TestProc ! {publish, Topic, Payload},
+			ok
+	end.
+
+
+action_to_test_only_asserted(Conn) ->
+	emqttc:publish(Conn, <<"topic_first">>, <<"payload_first">>),
+	emqttc:publish(Conn, <<"topic_second">>, <<"payload_second">>).
+	
