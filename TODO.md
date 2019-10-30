@@ -7,3 +7,6 @@
 
 - write docs
 - finish reporting results
+
+- color output of results with
+https://gist.github.com/ahmadster/c4638f30b183b30740aac6e02f2d6215

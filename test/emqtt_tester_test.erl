@@ -6,7 +6,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -compile([{parse_transform, lager_transform}]).
 
--define(setup(F), {foreach, fun setup/0, fun cleanup/1, F}).
+-define(setup(FunList), {foreach, fun setup/0, fun cleanup/1, FunList}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% TESTER DATA DEFINITIONS %%%

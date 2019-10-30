@@ -113,7 +113,11 @@ save_report(AssertionMessage, Reports, Evaluation) ->
 report(ReverseReports) ->
 	Reports = lists:reverse(ReverseReports),
 	lager:debug("Printing reports now: ~p~n", [Reports]),
-	%%TODO: print reports
-
+	lists:map(fun print_report/1, Reports),
+	
 	_ReportedResults = [Result || {_Message, Result} <- Reports].
 	%% ideally [success, success, ... , success]
+
+print_report(Report) ->
+	{AssertionMessage, Evaluation} = Report,
+	lager:info("--> ~p : ~p", [AssertionMessage, Evaluation]).
