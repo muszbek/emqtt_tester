@@ -8,7 +8,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([subscribe_to_assertions/2, connect_mqttc/1]).
+-export([subscribe_to_assertions/2, connect_mqttc/1, disconnect_mqttc/1]).
 
 
 subscribe_to_assertions(_Conn, []) ->
@@ -38,6 +38,11 @@ connect_mqttc({BrokerHost, BrokerPort, BrokerUser, BrokerPasswd, MyId})->
 				                       {reconnect, {5, 60, 100}}
 				                      ]),
 	Conn.
+
+disconnect_mqttc(Conn) ->
+	lager:debug("Disconnecting from emqttc"),
+	emqttc:disconnect(Conn).
+
 
 %% ====================================================================
 %% Internal functions

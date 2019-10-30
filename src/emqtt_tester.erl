@@ -48,7 +48,9 @@ wait_until_connected(Conn, Assertions) ->
 	end.
 
 
-assert_message(_Conn, [], Reports, no_timer) ->
+assert_message(Conn, [], Reports, no_timer) ->
+	%% this clause is called when there are no more assertions left
+	emqttc_utils:disconnect_mqttc(Conn),
 	report(Reports);
 
 assert_message(Conn, Assertions, Reports, OldTimerProc) ->

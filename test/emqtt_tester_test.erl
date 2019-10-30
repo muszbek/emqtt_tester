@@ -51,6 +51,7 @@ setup() ->
 	meck:expect(emqttc, subscribe, fun mock_subscribe/3),
 	meck:expect(emqttc, unsubscribe, fun mock_unsubscribe/2),
 	meck:expect(emqttc, publish, fun mock_publish/3),
+	meck:expect(emqttc, disconnect, fun mock_disconnect/1),
 	ok.
 
 cleanup(_) ->
@@ -145,6 +146,11 @@ mock_publish(Conn, Topic, Payload) ->
 			TestProc ! {publish, Topic, Payload},
 			ok
 	end.
+
+mock_disconnect(Conn) ->
+	{_TestProc, Subscriptions} = Conn,
+	true = ets:delete(Subscriptions),
+	ok.
 
 
 assert_success(ActionToTest) ->
