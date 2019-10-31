@@ -31,8 +31,18 @@ run(MqttAddress, Assertions, ActionToTest) ->
 validate_assertion({Topic, ExpectedPayload, AssertionMessage}) ->
 	validate_assertion({Topic, ExpectedPayload, AssertionMessage, ?DEFAULT_TIMEOUT});
 
-validate_assertion(Assertion) ->
-	Assertion.
+validate_assertion({Topic, Payload, Message, Timeout}) ->
+	ValidatedTopic = case Topic of
+						 T when is_binary(T) -> Topic;
+						 T -> list_to_binary(T)
+					 end,
+	
+	ValidatedPayload = case Payload of 
+						   P when is_binary(P) -> Payload;
+						   P -> list_to_binary(P)
+					   end,
+	
+	{ValidatedTopic, ValidatedPayload, Message, Timeout}.
 
 
 wait_until_connected(Conn, Assertions) ->
