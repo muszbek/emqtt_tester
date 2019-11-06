@@ -14,7 +14,8 @@
 
 -define(MQTT_ADDRESS, {"127.0.0.1", 1883, "guest", ""}).
 -define(TEST_ASSERTIONS, [{"topic_first", <<"payload_first">>, "Message_first!", 15},
-						  {<<"topic_second">>, "payload_second", <<"Message_second!">>, 15}]).
+						  {<<"topic_second">>, "ayload_second", <<"Message_second!">>, 15}]).
+%% equally checking string and binary arguments, full string and substring payloads
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% TESTS DESCRIPTIONS %%%

@@ -71,12 +71,19 @@ assert_message(Conn, Assertions, Reports, OldTimerProc) ->
 	TimerProc = start_timer_if_not_alive(OldTimerProc, TimeOut),
 	
 	receive
-		{publish, Topic, ExpectedPayload} ->
-			exit(TimerProc, assertion_success),	%% stopping timeout
-			lager:debug("Assertion succeeded on topic ~p with payload ~p", 
-						[Topic, ExpectedPayload]),
-			NewReports = save_report(AssertionMessage, Reports, success),
-			assert_message(Conn, RemainingAssertions, NewReports, no_timer);
+		{publish, Topic, Payload} ->
+			case binary:match(Payload, ExpectedPayload) of
+				nomatch ->
+					lager:debug("Unexpected message on mqtt: ~p: ~p", [Topic, Payload]),
+					assert_message(Conn, Assertions, Reports, TimerProc);
+				
+				_ ->
+					exit(TimerProc, assertion_success),	%% stopping timeout
+					lager:debug("Assertion succeeded on topic ~p with payload ~p", 
+								[Topic, ExpectedPayload]),
+					NewReports = save_report(AssertionMessage, Reports, success),
+					assert_message(Conn, RemainingAssertions, NewReports, no_timer)
+			end;
 		
 		{publish, OtherTopic, OtherPayload} ->
 			lager:debug("Unexpected message on mqtt: ~p: ~p", [OtherTopic, OtherPayload]),
