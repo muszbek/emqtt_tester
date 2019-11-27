@@ -21,7 +21,7 @@ run(MqttAddress, Assertions, ActionToTest) ->
 	TestAction = spawn_monitor(fun() -> ActionToTest(Conn) end),
 	lager:debug("Test process spawned at ~p", [TestAction]),
 	
-	assert_message(Conn, ValidAssertions, [], no_timer).
+	assert_messages(Conn, ValidAssertions).
 
 
 %% ====================================================================
@@ -57,6 +57,10 @@ wait_until_connected(Conn, Assertions) ->
 		%% emqttc doesn't give any messages on timeout by default
 	end.
 
+
+assert_messages(Conn, Assertions) ->
+	lager:debug("Starting asserting messages"),
+	assert_message(Conn, Assertions, [], no_timer).
 
 assert_message(Conn, [], Reports, no_timer) ->
 	%% this clause is called when there are no more assertions left
