@@ -74,7 +74,8 @@ assert_message(Conn, Assertions, Reports, OldTimerProc) ->
 		{publish, Topic, Payload} ->
 			case binary:match(Payload, ExpectedPayload) of
 				nomatch ->
-					lager:debug("Unexpected message on mqtt: ~p: ~p", [Topic, Payload]),
+					lager:debug("Unexpected message on expected topic on mqtt: ~p: ~p",
+								[Topic, Payload]),
 					assert_message(Conn, Assertions, Reports, TimerProc);
 				
 				_ ->
@@ -86,7 +87,8 @@ assert_message(Conn, Assertions, Reports, OldTimerProc) ->
 			end;
 		
 		{publish, OtherTopic, OtherPayload} ->
-			lager:debug("Unexpected message on mqtt: ~p: ~p", [OtherTopic, OtherPayload]),
+			lager:debug("Unexpected message on unexpected topic on mqtt: ~p: ~p",
+						[OtherTopic, OtherPayload]),
 			assert_message(Conn, Assertions, Reports, TimerProc);
 		
 		{assertion_timeout, TimerProc} ->
